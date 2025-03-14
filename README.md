@@ -2,7 +2,7 @@
 A screen-reading, self-improving AI assistant powered by Groq, Whisper vibes, and agentic innovation.
 
 ## Vision
-Compensate, innovate, adapt, adopt, learn, grow! Clean code (< 400 lines/file), open-source, unstoppable vibes. Now with pro-grade trading logic for stocks, crypto, futures—tracking TSLA swings, market sentiment, and more.
+Compensate, innovate, adapt, adopt, learn, grow! Clean code (< 400 lines/file), open-source, unstoppable vibes. Now with pro-grade trading logic and a self-learning loop for stocks, crypto, futures—tracking TSLA swings, market sentiment, and more.
 
 ## Setup
 1. Clone: `git clone https://github.com/q-killer/b0t.git`
@@ -15,18 +15,18 @@ Compensate, innovate, adapt, adopt, learn, grow! Clean code (< 400 lines/file), 
 ## Status
 - **Groq Integration**: Audio input → Whisper (`medium.en`) → Groq response → TTS (`pyttsx3`).
 - **Voice**: `arecord` recording, `faster-whisper` with VAD tweaks.
-- **TTS**: Fast local playback via `pyttsx3`.
+- **TTS**: Fast local playback via `pyttsx3` with sentence splitting.
 - **News**: Real-time headlines from Google News RSS.
 - **Trading**: Ross Cameron-inspired momentum logic—stocks (Yahoo Finance), crypto (Binance), sentiment analysis, low-risk trades (TSLA, BTC, etc.).
-- **Learning**: `learning.json` planned for feedback loop.
+- **Learning**: `learning.json` tracks trades, optimizes logic locally based on outcomes.
 
 ## Structure
-- `test_groq.py`: Core script (Groq + audio I/O + trading).
+- `test_groq.py`: Core script (Groq + audio I/O + trading + learning).
 - `test_bot.sh`: Test runner with correct env.
 - `test_tts.py`: TTS speed tester.
 - `voice.py`: Voice input prototype.
 - `.env`: API keys (gitignored).
-- `learning.json`: Feedback storage (WIP).
+- `learning.json`: Trade log and learning data (local, updated per run).
 - `requirements.txt`: Dependencies.
 - `myenv/`: Dedicated virtual env (gitignored).
 
@@ -34,6 +34,10 @@ Compensate, innovate, adapt, adopt, learn, grow! Clean code (< 400 lines/file), 
 - **Sources**: Yahoo Finance (stocks), Binance (crypto), news sentiment.
 - **Strategy**: Buy on volume breakouts + positive sentiment, sell on RSI overbought or profit targets, tight stops (1%).
 - **Goals**: Maximize profit, minimize risk—day trades, swing trades, crypto swings.
+
+## Learning Loop
+- **Storage**: `learning.json` logs trades (ticker, change, volume, RSI, advice, outcome).
+- **Optimization**: Analyzes past trades, adjusts thresholds for better wins—local and efficient.
 
 ## Contributing
 Fork, branch, PR—keep it concise, documented, and epic!
