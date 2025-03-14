@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""test_groq.py - Groq API test with Whisper audio input and TTS for Future Assistant v1.0"""
+"""test_groq.py - Groq API test with Whisper audio input and precached TTS for Future Assistant v1.0"""
 
 import os
 from dotenv import load_dotenv
@@ -18,6 +18,15 @@ def load_api_key():
         print("Error: GROQ_API_KEY not found. Set it in .env or environment.")
         sys.exit(1)
     return api_key
+
+def precache_tts(file_path="output.mp3"):
+    """Precache a default TTS response."""
+    try:
+        tts = gTTS(text="Processing your request, please wait!", lang="en")
+        tts.save(file_path)
+        print(f"Precached TTS to {file_path}")
+    except Exception as e:
+        print(f"Error precaching TTS: {e}")
 
 def record_audio(file_path="input.wav", duration=5):
     """Record audio using arecord and return the file path."""
@@ -40,7 +49,7 @@ def transcribe_audio(file_path):
     """Transcribe audio file to text using faster-whisper."""
     try:
         model = WhisperModel("medium.en", device="cpu")
-        segments, _ = model.transcribe(file_path, beam_size=5, vad_filter=True, vad_parameters=dict(min_silence_duration_ms=500))  # Less strict VAD
+        segments, _ = model.transcribe(file_path, beam_size=5, vad_filter=True, vad_parameters=dict(min_silence_duration_ms=500))
         text = " ".join(segment.text for segment in segments)
         print(f"Transcribed: {text}")
         return text if text.strip() else None
@@ -78,6 +87,9 @@ def main():
     """Main function to run Groq API test with Whisper audio input and TTS."""
     api_key = load_api_key()
     client = Groq(api_key=api_key)
+
+    # Precache TTS
+    precache_tts()
 
     # Record and transcribe audio
     print("Recording 5 seconds of audio...")
