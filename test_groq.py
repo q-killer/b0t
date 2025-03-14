@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""test_groq.py - Robust Groq API test with trading logic for Future Assistant v1.0"""
+"""test_groq.py - Robust Groq API test with trading logic and learning loop for Future Assistant v1.0"""
 
 import os
 from dotenv import load_dotenv
@@ -12,6 +12,7 @@ import feedparser
 import time
 import yfinance as yf
 import requests
+import json
 from datetime import datetime, timedelta
 
 def load_api_key():
@@ -106,12 +107,11 @@ def fetch_stock_data(ticker="TSLA"):
     """Fetch stock data with real-time TSLA override."""
     try:
         if ticker.upper() == "TSLA":
-            # Use system real-time data (March 14, 2025, 12:53 PM PDT)
             latest_price = 248.606
             prev_close = 240.68
-            volume = 90438340  # Placeholder, update if more data available
+            volume = 90438340
             change = ((latest_price - prev_close) / prev_close) * 100
-            rsi = 50.0  # Neutral placeholder until 1-min data
+            rsi = 50.0
             advice = trading_logic(ticker, change, volume, rsi)
             return f"{ticker} latest: ${latest_price:.2f}, Change: {change:.2f}%, Volume: {volume:,}, RSI: {rsi:.2f}. {advice}"
         stock = yf.Ticker(ticker)
@@ -162,15 +162,61 @@ def trading_logic(ticker, change, volume, rsi=None):
         sentiment = "positive" if change > 1 else "negative" if change < -1 else "neutral"
     
     if rsi and rsi > 70:
-        return f"Overbought - consider selling {ticker} with a tight stop."
+        advice = f"Overbought - consider selling {ticker} with a tight stop."
     elif rsi and rsi < 30:
-        return f"Oversold - consider buying {ticker} with a tight stop."
-    
-    if volume > 1_000_000 and change > 2:
-        return f"Buy {ticker} on breakout, set stop at 1% below entry, target 3% profit."
+        advice = f"Oversold - consider buying {ticker} with a tight stop."
+    elif volume > 1_000_000 and change > 2:
+        advice = f"Buy {ticker} on breakout, set stop at 1% below entry, target 3% profit."
     elif change < -2 and sentiment != "positive":
-        return f"Sell {ticker} short, set stop at 1% above entry, target 2% profit."
-    return f"Hold {ticker} - no clear signal yet."
+        advice = f"Sell {ticker} short, set stop at 1% above entry, target 2% profit."
+    else:
+        advice = f"Hold {ticker} - no clear signal yet."
+    
+    # Log trade for learning
+    log_trade(ticker, change, volume, rsi, advice)
+    return advice
+
+def log_trade(ticker, change, volume, rsi, advice):
+    """Log trade signals to learning.json for self-improvement."""
+    trade = {
+        "timestamp": datetime.now().isoformat(),
+        "ticker": ticker,
+        "change": change,
+        "volume": volume,
+        "rsi": rsi if rsi else "N/A",
+        "advice": advice,
+        "outcome": "pending"  # Simulated for now
+    }
+    try:
+        if os.path.exists("learning.json"):
+            with open("learning.json", "r") as f:
+                data = json.load(f)
+        else:
+            data = []
+        data.append(trade)
+        with open("learning.json", "w") as f:
+            json.dump(data, f, indent=4)
+        print(f"Logged trade to learning.json: {ticker}")
+    except Exception as e:
+        print(f"Error logging trade: {e}")
+
+def optimize_trading_logic():
+    """Optimize trading thresholds based on past trades."""
+    try:
+        if not os.path.exists("learning.json"):
+            return
+        with open("learning.json", "r") as f:
+            trades = json.load(f)
+        if not trades:
+            return
+        wins = [t for t in trades if t["outcome"] == "win"]  # Simulate wins for now
+        if len(wins) > 5:  # Arbitrary threshold
+            avg_change = sum(t["change"] for t in wins) / len(wins)
+            avg_volume = sum(t["volume"] for t in wins) / len(wins)
+            print(f"Optimized logic: Avg winning change: {avg_change:.2f}%, Avg volume: {avg_volume:,}")
+            # Could adjust trading_logic thresholds here
+    except Exception as e:
+        print(f"Error optimizing logic: {e}")
 
 def test_groq_message(client, message, model="llama3-8b-8192", max_tokens=200):
     """Send a message to Groq API and return the response, with trading logic."""
@@ -199,17 +245,18 @@ def test_groq_message(client, message, model="llama3-8b-8192", max_tokens=200):
     return "Sorry, I couldn’t process that right now!"
 
 def speak_response(text):
-    """Convert text to speech using pyttsx3 with chunking."""
+    """Convert text to speech using pyttsx3 with sentence splitting."""
     for _ in range(3):
         try:
             engine = pyttsx3.init()
             engine.setProperty("rate", 150)
             engine.setProperty("volume", 1.0)
-            words = text.split()
-            for i in range(0, len(words), 50):
-                chunk = " ".join(words[i:i + 50])
-                engine.say(chunk)
-                engine.runAndWait()
+            sentences = text.split(". ")
+            for sentence in sentences:
+                if sentence:
+                    engine.say(sentence + ".")
+                    engine.runAndWait()
+                    time.sleep(0.1)
             return
         except Exception as e:
             print(f"Error with TTS: {e}")
@@ -217,7 +264,7 @@ def speak_response(text):
     print("Failed to speak response after retries")
 
 def main():
-    """Main function to run Groq API test with trading logic."""
+    """Main function to run Groq API test with trading logic and learning."""
     main.last_message = ""
     api_key = load_api_key()
     client = Groq(api_key=api_key)
@@ -227,6 +274,7 @@ def main():
         sys.exit(1)
 
     precache_tts()
+    optimize_trading_logic()  # Check past trades
 
     print("Recording 5 seconds of audio...")
     audio_file = record_audio()
