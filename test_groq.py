@@ -29,7 +29,7 @@ def precache_tts():
     for _ in range(3):
         try:
             engine = pyttsx3.init()
-            engine.setProperty("rate", 145)
+            engine.setProperty("rate", 140)
             engine.setProperty("volume", 1.0)
             engine.save_to_file("Processing your request, please wait!", "output.mp3")
             engine.runAndWait()
@@ -112,15 +112,15 @@ def fetch_stock_data(ticker="TSLA"):
             volume = 90438340
             change = ((latest_price - prev_close) / prev_close) * 100
             rsi = 50.0
-            advice = trading_logic(ticker, change, volume, rsi)
+            advice = trading_logic(ticker, change, volume, rsi, latest_price)
             return f"{ticker} latest: ${latest_price:.2f}, Change: {change:.2f}%, Volume: {volume:,}, RSI: {rsi:.2f}. {advice}"
         elif ticker.upper() == "NVDA":
-            latest_price = 121.495  # System real-time data, 01:10 PM PDT, March 14, 2025
+            latest_price = 121.495
             prev_close = 115.58
-            volume = 90438340  # Placeholder, no intraday volume update
+            volume = 90438340
             change = ((latest_price - prev_close) / prev_close) * 100
-            rsi = 50.0  # Placeholder until 1-min data
-            advice = trading_logic(ticker, change, volume, rsi)
+            rsi = 50.0
+            advice = trading_logic(ticker, change, volume, rsi, latest_price)
             return f"{ticker} latest: ${latest_price:.2f}, Change: {change:.2f}%, Volume: {volume:,}, RSI: {rsi:.2f}. {advice}"
         stock = yf.Ticker(ticker)
         hist = stock.history(period="5d", interval="1d")
@@ -131,7 +131,7 @@ def fetch_stock_data(ticker="TSLA"):
         change = ((latest["Close"] - prev["Close"]) / prev["Close"]) * 100
         volume = latest["Volume"]
         rsi = calc_rsi(hist["Close"].values)
-        advice = trading_logic(ticker, change, volume, rsi)
+        advice = trading_logic(ticker, change, volume, rsi, latest["Close"])
         return f"{ticker} latest: ${latest['Close']:.2f}, Change: {change:.2f}%, Volume: {volume:,}, RSI: {rsi:.2f}. {advice}"
     except Exception as e:
         print(f"Error fetching stock data: {e}")
@@ -145,7 +145,7 @@ def fetch_crypto_data(symbol="BTCUSDT"):
         price = float(resp["lastPrice"])
         change = float(resp["priceChangePercent"])
         volume = float(resp["volume"])
-        advice = trading_logic(symbol, change, volume, None)
+        advice = trading_logic(symbol, change, volume, None, price)
         return f"{symbol} latest: ${price:.2f}, Change: {change:.2f}%, Volume: {volume:,.2f}. {advice}"
     except Exception as e:
         print(f"Error fetching crypto data: {e}")
@@ -163,7 +163,7 @@ def calc_rsi(prices, period=14):
     rs = avg_gain / avg_loss if avg_loss != 0 else 0
     return 100 - (100 / (1 + rs))
 
-def trading_logic(ticker, change, volume, rsi=None):
+def trading_logic(ticker, change, volume, rsi=None, entry_price=None):
     """Ross Cameron-inspired momentum logic with risk management."""
     sentiment = "neutral"
     if "news" in main.last_message.lower():
@@ -180,11 +180,11 @@ def trading_logic(ticker, change, volume, rsi=None):
     else:
         advice = f"Hold {ticker} - no clear signal yet."
     
-    log_trade(ticker, change, volume, rsi, advice)
+    log_trade(ticker, change, volume, rsi, advice, entry_price)
     return advice
 
-def log_trade(ticker, change, volume, rsi, advice):
-    """Log trade signals to learning.json as a list."""
+def log_trade(ticker, change, volume, rsi, advice, entry_price):
+    """Log trade signals to learning.json with entry price."""
     trade = {
         "timestamp": datetime.now().isoformat(),
         "ticker": ticker,
@@ -192,6 +192,7 @@ def log_trade(ticker, change, volume, rsi, advice):
         "volume": volume,
         "rsi": rsi if rsi else "N/A",
         "advice": advice,
+        "entry_price": entry_price,
         "outcome": "pending"
     }
     try:
@@ -200,13 +201,46 @@ def log_trade(ticker, change, volume, rsi, advice):
             with open("learning.json", "r") as f:
                 data = json.load(f)
                 if not isinstance(data, list):
-                    data = []  # Reset if corrupted
+                    data = []
         data.append(trade)
         with open("learning.json", "w") as f:
             json.dump(data, f, indent=4)
         print(f"Logged trade to learning.json: {ticker}")
     except Exception as e:
         print(f"Error logging trade: {e}")
+
+def evaluate_trade_outcome(trade):
+    """Evaluate trade outcome based on current price (simulated delay)."""
+    ticker = trade["ticker"]
+    entry_price = trade["entry_price"]
+    advice = trade["advice"]
+    try:
+        if ticker in ["TSLA", "NVDA"]:
+            current_price = fetch_stock_data(ticker).split("latest: $")[1].split(",")[0]
+            current_price = float(current_price)
+        elif ticker == "BTCUSDT":
+            current_price = float(fetch_crypto_data(ticker).split("latest: $")[1].split(",")[0])
+        else:
+            return "pending"
+        
+        if "Buy" in advice:
+            profit_target = entry_price * 1.03
+            stop_loss = entry_price * 0.99
+            if current_price >= profit_target:
+                return "win"
+            elif current_price <= stop_loss:
+                return "loss"
+        elif "Sell" in advice:
+            profit_target = entry_price * 0.98
+            stop_loss = entry_price * 1.01
+            if current_price <= profit_target:
+                return "win"
+            elif current_price >= stop_loss:
+                return "loss"
+        return "pending"
+    except Exception as e:
+        print(f"Error evaluating trade: {e}")
+        return "pending"
 
 def optimize_trading_logic():
     """Optimize trading thresholds based on past trades."""
@@ -217,7 +251,16 @@ def optimize_trading_logic():
             trades = json.load(f)
         if not isinstance(trades, list) or not trades:
             return
-        wins = [t for t in trades if t.get("outcome") == "win"]
+        
+        # Update outcomes
+        for trade in trades:
+            if trade["outcome"] == "pending":
+                trade["outcome"] = evaluate_trade_outcome(trade)
+        
+        with open("learning.json", "w") as f:
+            json.dump(trades, f, indent=4)
+        
+        wins = [t for t in trades if t["outcome"] == "win"]
         if len(wins) > 5:
             avg_change = sum(t["change"] for t in wins) / len(wins)
             avg_volume = sum(t["volume"] for t in wins) / len(wins)
@@ -269,14 +312,14 @@ def speak_response(text):
     for _ in range(3):
         try:
             engine = pyttsx3.init()
-            engine.setProperty("rate", 145)
+            engine.setProperty("rate", 140)
             engine.setProperty("volume", 1.0)
             sentences = text.split(". ")
             for sentence in sentences:
                 if sentence:
                     engine.say(sentence + ".")
                     engine.runAndWait()
-                    time.sleep(0.2)
+                    time.sleep(0.3)
             return
         except Exception as e:
             print(f"Error with TTS: {e}")
