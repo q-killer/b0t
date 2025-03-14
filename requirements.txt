@@ -3,4 +3,3 @@ python-dotenv
 faster-whisper
 gtts
 pygame
-pygobject
