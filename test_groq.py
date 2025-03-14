@@ -26,7 +26,12 @@ def record_audio(file_path="input.wav", duration=5):
             ["arecord", "-d", str(duration), "-f", "cd", "--quiet", file_path],
             check=True, stderr=subprocess.PIPE
         )
-        return file_path
+        if os.path.exists(file_path) and os.path.getsize(file_path) > 0:
+            print(f"Audio recorded to {file_path}")
+            return file_path
+        else:
+            print("Error: No audio file created or empty")
+            return None
     except subprocess.CalledProcessError as e:
         print(f"Error recording audio: {e.stderr.decode()}")
         return None
@@ -34,8 +39,8 @@ def record_audio(file_path="input.wav", duration=5):
 def transcribe_audio(file_path):
     """Transcribe audio file to text using faster-whisper."""
     try:
-        model = WhisperModel("medium.en", device="cpu")  # Higher accuracy
-        segments, _ = model.transcribe(file_path, beam_size=5, vad_filter=True)  # Noise suppression
+        model = WhisperModel("medium.en", device="cpu")
+        segments, _ = model.transcribe(file_path, beam_size=5, vad_filter=True, vad_parameters=dict(min_silence_duration_ms=500))  # Less strict VAD
         text = " ".join(segment.text for segment in segments)
         print(f"Transcribed: {text}")
         return text if text.strip() else None
@@ -64,7 +69,7 @@ def speak_response(text, file_path="output.mp3"):
         pygame.mixer.init()
         pygame.mixer.music.load(file_path)
         pygame.mixer.music.play()
-        while pygame.mixer.music.get_busy():  # Wait for playback
+        while pygame.mixer.music.get_busy():
             pygame.time.Clock().tick(10)
     except Exception as e:
         print(f"Error with TTS: {e}")
