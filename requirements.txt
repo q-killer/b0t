@@ -3,3 +3,7 @@ python-dotenv
 faster-whisper
 feedparser
 pyttsx3
+yfinance
+requests
+pillow
+pytesseract
