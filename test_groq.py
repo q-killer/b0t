@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""test_groq.py - Groq API test with Whisper audio input, precached TTS, and news fetching for Future Assistant v1.0"""
+"""test_groq.py - Groq API test with Whisper audio input, local TTS, and news fetching for Future Assistant v1.0"""
 
 import os
 from dotenv import load_dotenv
@@ -7,8 +7,7 @@ from groq import Groq
 import sys
 import subprocess
 from faster_whisper import WhisperModel
-from gtts import gTTS
-import pygame.mixer
+import pyttsx3
 import feedparser
 
 def load_api_key():
@@ -20,12 +19,13 @@ def load_api_key():
         sys.exit(1)
     return api_key
 
-def precache_tts(file_path="output.mp3"):
+def precache_tts():
     """Precache a default TTS response."""
     try:
-        tts = gTTS(text="Processing your request, please wait!", lang="en")
-        tts.save(file_path)
-        print(f"Precached TTS to {file_path}")
+        engine = pyttsx3.init()
+        engine.save_to_file("Processing your request, please wait!", "output.mp3")
+        engine.runAndWait()
+        print("Precached TTS to output.mp3")
     except Exception as e:
         print(f"Error precaching TTS: {e}")
 
@@ -65,7 +65,7 @@ def fetch_news(category="general"):
         if category == "technology":
             url = "https://news.google.com/rss/topics/CAAqJggKIiBDQkFTRWdvSUwyMHZNRGRqTVhZU0FtVnVHZ0pWVXlnQVAB?hl=en-US&gl=US&ceid=US:en"
         feed = feedparser.parse(url)
-        headlines = [entry.title for entry in feed.entries[:5]]  # Top 5 headlines
+        headlines = [entry.title for entry in feed.entries[:5]]
         return "Here are the latest headlines: " + "; ".join(headlines)
     except Exception as e:
         print(f"Error fetching news: {e}")
@@ -89,16 +89,13 @@ def test_groq_message(client, message, model="llama3-8b-8192", max_tokens=200):
         print(f"Error contacting Groq API: {e}")
         sys.exit(1)
 
-def speak_response(text, file_path="output.mp3"):
-    """Convert text to speech using gTTS and play with pygame."""
+def speak_response(text):
+    """Convert text to speech using pyttsx3."""
     try:
-        tts = gTTS(text=text, lang="en")
-        tts.save(file_path)
-        pygame.mixer.init()
-        pygame.mixer.music.load(file_path)
-        pygame.mixer.music.play()
-        while pygame.mixer.music.get_busy():
-            pygame.time.Clock().tick(10)
+        engine = pyttsx3.init()
+        engine.setProperty("rate", 150)  # Speed up slightly
+        engine.say(text)
+        engine.runAndWait()
     except Exception as e:
         print(f"Error with TTS: {e}")
 
