@@ -1,5 +1,5 @@
 groq
 python-dotenv
-speechrecognition
+faster-whisper
 gtts
 playsound
