@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
-"""test_groq.py - Groq API test with audio input and TTS for Future Assistant v1.0"""
+"""test_groq.py - Groq API test with Whisper audio input and TTS for Future Assistant v1.0"""
 
 import os
 from dotenv import load_dotenv
 from groq import Groq
 import sys
 import subprocess
-import speech_recognition as sr
+from faster_whisper import WhisperModel
 from gtts import gTTS
 import playsound
 
@@ -32,22 +32,15 @@ def record_audio(file_path="input.wav", duration=5):
         return None
 
 def transcribe_audio(file_path):
-    """Transcribe audio file to text using Google Speech-to-Text."""
-    r = sr.Recognizer()
+    """Transcribe audio file to text using faster-whisper."""
     try:
-        with sr.AudioFile(file_path) as source:
-            audio = r.record(source)
-            text = r.recognize_google(audio)
-            print(f"Transcribed: {text}")
-            return text
-    except sr.UnknownValueError:
-        print("Sorry, I couldn’t understand the audio.")
-        return None
-    except sr.RequestError as e:
-        print(f"Error with transcription service: {e}")
-        return None
+        model = WhisperModel("tiny.en", device="cpu")  # Lightweight model
+        segments, _ = model.transcribe(file_path, beam_size=5)
+        text = " ".join(segment.text for segment in segments)
+        print(f"Transcribed: {text}")
+        return text if text.strip() else None
     except Exception as e:
-        print(f"Audio processing error: {e}")
+        print(f"Error with Whisper transcription: {e}")
         return None
 
 def test_groq_message(client, message, model="llama3-8b-8192", max_tokens=200):
@@ -73,7 +66,7 @@ def speak_response(text, file_path="output.mp3"):
         print(f"Error with TTS: {e}")
 
 def main():
-    """Main function to run Groq API test with audio input and TTS."""
+    """Main function to run Groq API test with Whisper audio input and TTS."""
     api_key = load_api_key()
     client = Groq(api_key=api_key)
 
