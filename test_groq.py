@@ -2,16 +2,14 @@
 """test_groq.py - Core bot logic for Future Assistant v1.0"""
 
 import os
+os.environ["CT2_VERBOSE"] = "0"  # Suppress float16 warning at the top
 from dotenv import load_dotenv
 from groq import Groq
 import sys
 import subprocess
-from faster_whisper import WhisperModel
-import pyttsx3
 import time
+from faster_whisper import WhisperModel
 from trading.trading_logic import fetch_stock_data, log_trade, optimize_logic
-
-os.environ["CT2_VERBOSE"] = "0"  # Suppress float16 warning
 
 def load_api_key():
     """Load API keys from .env or environment variable."""
@@ -27,17 +25,8 @@ def precache_tts():
     """Precache a default TTS response."""
     for _ in range(3):
         try:
-            engine = pyttsx3.init()
-            engine.setProperty("rate", 150)
-            engine.setProperty("volume", 1.0)
-            voices = engine.getProperty("voices")
-            for voice in voices:
-                if "female" in voice.name.lower():
-                    engine.setProperty("voice", voice.id)
-                    break
-            engine.save_to_file("Processing your request, please wait!", "output.mp3")
-            engine.runAndWait()
-            print("Precached TTS to output.mp3")
+            subprocess.run(["echo", '"Processing your request, please wait!"', "|", "festival", "--tts", "--voice", "kal_diphone"], shell=True)
+            print("Precached TTS with festival")
             return
         except Exception as e:
             print(f"Error precaching TTS: {e}")
@@ -134,7 +123,10 @@ def test_groq_message(client, message, alpha_key, model="llama3-8b-8192", max_to
                     return fetch_stock_data(ticker, alpha_key)
             response = client.chat.completions.create(
                 model=model,
-                messages=[{"role": "system", "content": "You are an expert financial advisor. Provide confident, expert-level advice."}, {"role": "user", "content": message}],
+                messages=[
+                    {"role": "system", "content": "You are an expert financial advisor. Provide confident, specific stock recommendations based on current data and trends."},
+                    {"role": "user", "content": message}
+                ],
                 max_tokens=max_tokens
             )
             return response.choices[0].message.content
@@ -145,22 +137,13 @@ def test_groq_message(client, message, alpha_key, model="llama3-8b-8192", max_to
     return "Sorry, I couldn’t process that right now!"
 
 def speak_response(text):
-    """Convert text to speech using pyttsx3 with female voice."""
+    """Convert text to speech using festival with female voice."""
     for _ in range(3):
         try:
-            engine = pyttsx3.init()
-            engine.setProperty("rate", 150)
-            engine.setProperty("volume", 1.0)
-            voices = engine.getProperty("voices")
-            for voice in voices:
-                if "female" in voice.name.lower():
-                    engine.setProperty("voice", voice.id)
-                    break
             sentences = text.split(". ")
             for sentence in sentences:
                 if sentence:
-                    engine.say(sentence + ".")
-                    engine.runAndWait()
+                    subprocess.run(["echo", f'"{sentence}."', "|", "festival", "--tts", "--voice", "kal_diphone"], shell=True)
                     time.sleep(0.5)
             return
         except Exception as e:
