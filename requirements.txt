@@ -7,3 +7,4 @@ yfinance
 requests
 pillow
 pytesseract
+alpha_vantage
