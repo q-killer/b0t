@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""test_groq.py - Groq API test with Whisper audio input and precached TTS for Future Assistant v1.0"""
+"""test_groq.py - Groq API test with Whisper audio input, precached TTS, and news fetching for Future Assistant v1.0"""
 
 import os
 from dotenv import load_dotenv
@@ -9,6 +9,7 @@ import subprocess
 from faster_whisper import WhisperModel
 from gtts import gTTS
 import pygame.mixer
+import feedparser
 
 def load_api_key():
     """Load the Groq API key from .env or environment variable."""
@@ -57,9 +58,27 @@ def transcribe_audio(file_path):
         print(f"Error with Whisper transcription: {e}")
         return None
 
-def test_groq_message(client, message, model="llama3-8b-8192", max_tokens=200):
-    """Send a message to Groq API and return the response."""
+def fetch_news(category="general"):
+    """Fetch latest news headlines from Google News RSS."""
     try:
+        url = "https://news.google.com/rss?hl=en-US&gl=US&ceid=US:en"
+        if category == "technology":
+            url = "https://news.google.com/rss/topics/CAAqJggKIiBDQkFTRWdvSUwyMHZNRGRqTVhZU0FtVnVHZ0pWVXlnQVAB?hl=en-US&gl=US&ceid=US:en"
+        feed = feedparser.parse(url)
+        headlines = [entry.title for entry in feed.entries[:5]]  # Top 5 headlines
+        return "Here are the latest headlines: " + "; ".join(headlines)
+    except Exception as e:
+        print(f"Error fetching news: {e}")
+        return "Sorry, I couldn’t fetch the news right now!"
+
+def test_groq_message(client, message, model="llama3-8b-8192", max_tokens=200):
+    """Send a message to Groq API and return the response, with news fetching."""
+    try:
+        if "news" in message.lower():
+            category = "general"
+            if "technology" in message.lower():
+                category = "technology"
+            return fetch_news(category)
         response = client.chat.completions.create(
             model=model,
             messages=[{"role": "user", "content": message}],
