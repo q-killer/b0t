@@ -12,19 +12,20 @@ Compensate, innovate, adapt, adopt, learn, grow! Clean code (< 400 lines/file), 
 5. Run: `./test_groq.py` or `./test_bot.sh`
 
 ## Status
-- **Groq Integration**: Audio input → Whisper transcription → Groq response → TTS output.
-- **Voice**: Local recording (`arecord`), `faster-whisper` (small.en).
-- **TTS**: `gTTS` + `playsound` with `pygobject` optimization.
+- **Groq Integration**: Audio input → Whisper (`medium.en`) → Groq response → TTS (`gTTS` + `pygame`).
+- **Voice**: `arecord` recording, `faster-whisper` with VAD tweaks.
+- **TTS**: Fast playback via `pygame.mixer`.
 - **Learning**: `learning.json` planned for feedback loop.
 
 ## Structure
 - `test_groq.py`: Core script (Groq + audio I/O).
 - `test_bot.sh`: Test runner with correct env.
+- `test_tts.py`: TTS speed tester.
 - `voice.py`: Voice input prototype.
 - `.env`: API keys (gitignored).
 - `learning.json`: Feedback storage (WIP).
 - `requirements.txt`: Dependencies.
-- `myenv/`: Dedicated virtual env.
+- `myenv/`: Dedicated virtual env (gitignored).
 
 ## Contributing
 Fork, branch, PR—keep it concise, documented, and epic!
