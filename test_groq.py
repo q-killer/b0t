@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""test_groq.py - Groq API test with Whisper audio input, local TTS, and news fetching for Future Assistant v1.0"""
+"""test_groq.py - Robust Groq API test with Whisper, local TTS, and news fetching for Future Assistant v1.0"""
 
 import os
 from dotenv import load_dotenv
@@ -9,6 +9,7 @@ import subprocess
 from faster_whisper import WhisperModel
 import pyttsx3
 import feedparser
+import time
 
 def load_api_key():
     """Load the Groq API key from .env or environment variable."""
@@ -21,30 +22,50 @@ def load_api_key():
 
 def precache_tts():
     """Precache a default TTS response."""
-    try:
-        engine = pyttsx3.init()
-        engine.save_to_file("Processing your request, please wait!", "output.mp3")
-        engine.runAndWait()
-        print("Precached TTS to output.mp3")
-    except Exception as e:
-        print(f"Error precaching TTS: {e}")
+    for _ in range(3):  # Retry 3 times
+        try:
+            engine = pyttsx3.init()
+            engine.save_to_file("Processing your request, please wait!", "output.mp3")
+            engine.runAndWait()
+            print("Precached TTS to output.mp3")
+            return
+        except Exception as e:
+            print(f"Error precaching TTS: {e}")
+            time.sleep(1)
+    print("Failed to precache TTS after retries")
 
-def record_audio(file_path="input.wav", duration=5):
-    """Record audio using arecord and return the file path."""
+def test_mic():
+    """Test microphone by recording a short sample."""
     try:
-        subprocess.run(
-            ["arecord", "-d", str(duration), "-f", "cd", "--quiet", file_path],
-            check=True, stderr=subprocess.PIPE
-        )
-        if os.path.exists(file_path) and os.path.getsize(file_path) > 0:
-            print(f"Audio recorded to {file_path}")
-            return file_path
+        subprocess.run(["arecord", "-d", "1", "-f", "cd", "--quiet", "test.wav"], check=True)
+        if os.path.exists("test.wav") and os.path.getsize("test.wav") > 0:
+            os.remove("test.wav")
+            return True
         else:
-            print("Error: No audio file created or empty")
-            return None
-    except subprocess.CalledProcessError as e:
-        print(f"Error recording audio: {e.stderr.decode()}")
-        return None
+            print("Mic test failed: No audio recorded")
+            return False
+    except Exception as e:
+        print(f"Mic test error: {e}")
+        return False
+
+def record_audio(file_path="input.wav", duration=5, retries=3):
+    """Record audio using arecord with retries."""
+    for attempt in range(retries):
+        try:
+            subprocess.run(
+                ["arecord", "-d", str(duration), "-f", "cd", "--quiet", file_path],
+                check=True, stderr=subprocess.PIPE
+            )
+            if os.path.exists(file_path) and os.path.getsize(file_path) > 0:
+                print(f"Audio recorded to {file_path}")
+                return file_path
+            else:
+                print(f"Attempt {attempt + 1}: No audio file created or empty")
+        except subprocess.CalledProcessError as e:
+            print(f"Attempt {attempt + 1} error recording audio: {e.stderr.decode()}")
+        time.sleep(1)
+    print("Failed to record audio after retries")
+    return None
 
 def transcribe_audio(file_path):
     """Transcribe audio file to text using faster-whisper."""
@@ -60,49 +81,66 @@ def transcribe_audio(file_path):
 
 def fetch_news(category="general"):
     """Fetch latest news headlines from Google News RSS."""
-    try:
-        url = "https://news.google.com/rss?hl=en-US&gl=US&ceid=US:en"
-        if category == "technology":
-            url = "https://news.google.com/rss/topics/CAAqJggKIiBDQkFTRWdvSUwyMHZNRGRqTVhZU0FtVnVHZ0pWVXlnQVAB?hl=en-US&gl=US&ceid=US:en"
-        feed = feedparser.parse(url)
-        headlines = [entry.title for entry in feed.entries[:5]]
-        return "Here are the latest headlines: " + "; ".join(headlines)
-    except Exception as e:
-        print(f"Error fetching news: {e}")
-        return "Sorry, I couldn’t fetch the news right now!"
+    for _ in range(3):  # Retry 3 times
+        try:
+            url = "https://news.google.com/rss?hl=en-US&gl=US&ceid=US:en"
+            if category == "technology":
+                url = "https://news.google.com/rss/topics/CAAqJggKIiBDQkFTRWdvSUwyMHZNRGRqTVhZU0FtVnVHZ0pWVXlnQVAB?hl=en-US&gl=US&ceid=US:en"
+            feed = feedparser.parse(url)
+            if feed.entries:
+                headlines = [entry.title for entry in feed.entries[:5]]
+                return "Here are the latest headlines: " + "; ".join(headlines)
+            else:
+                print("No news entries found")
+        except Exception as e:
+            print(f"Error fetching news: {e}")
+            time.sleep(1)
+    return "Sorry, I couldn’t fetch the news right now!"
 
 def test_groq_message(client, message, model="llama3-8b-8192", max_tokens=200):
     """Send a message to Groq API and return the response, with news fetching."""
-    try:
-        if "news" in message.lower():
-            category = "general"
-            if "technology" in message.lower():
-                category = "technology"
-            return fetch_news(category)
-        response = client.chat.completions.create(
-            model=model,
-            messages=[{"role": "user", "content": message}],
-            max_tokens=max_tokens
-        )
-        return response.choices[0].message.content
-    except Exception as e:
-        print(f"Error contacting Groq API: {e}")
-        sys.exit(1)
+    for _ in range(3):  # Retry 3 times
+        try:
+            if "news" in message.lower():
+                category = "general"
+                if "technology" in message.lower():
+                    category = "technology"
+                return fetch_news(category)
+            response = client.chat.completions.create(
+                model=model,
+                messages=[{"role": "user", "content": message}],
+                max_tokens=max_tokens
+            )
+            return response.choices[0].message.content
+        except Exception as e:
+            print(f"Error contacting Groq API: {e}")
+            time.sleep(1)
+    print("Failed to get Groq response after retries")
+    return "Sorry, I couldn’t process that right now!"
 
 def speak_response(text):
     """Convert text to speech using pyttsx3."""
-    try:
-        engine = pyttsx3.init()
-        engine.setProperty("rate", 150)  # Speed up slightly
-        engine.say(text)
-        engine.runAndWait()
-    except Exception as e:
-        print(f"Error with TTS: {e}")
+    for _ in range(3):  # Retry 3 times
+        try:
+            engine = pyttsx3.init()
+            engine.setProperty("rate", 150)
+            engine.say(text)
+            engine.runAndWait()
+            return
+        except Exception as e:
+            print(f"Error with TTS: {e}")
+            time.sleep(1)
+    print("Failed to speak response after retries")
 
 def main():
     """Main function to run Groq API test with Whisper audio input and TTS."""
     api_key = load_api_key()
     client = Groq(api_key=api_key)
+
+    # Test mic
+    if not test_mic():
+        print("Mic not working, exiting...")
+        sys.exit(1)
 
     # Precache TTS
     precache_tts()
