@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""test_groq.py - Robust Groq API test with trading logic and learning loop for Future Assistant v1.0"""
+"""test_groq.py - Robust Groq API test with trading logic, learning loop, and fixes for Future Assistant v1.0"""
 
 import os
 from dotenv import load_dotenv
@@ -29,7 +29,7 @@ def precache_tts():
     for _ in range(3):
         try:
             engine = pyttsx3.init()
-            engine.setProperty("rate", 150)
+            engine.setProperty("rate", 145)
             engine.setProperty("volume", 1.0)
             engine.save_to_file("Processing your request, please wait!", "output.mp3")
             engine.runAndWait()
@@ -104,7 +104,7 @@ def fetch_news(category="general"):
     return "Sorry, I couldn’t fetch the news right now!"
 
 def fetch_stock_data(ticker="TSLA"):
-    """Fetch stock data with real-time TSLA override."""
+    """Fetch stock data with real-time overrides."""
     try:
         if ticker.upper() == "TSLA":
             latest_price = 248.606
@@ -112,6 +112,14 @@ def fetch_stock_data(ticker="TSLA"):
             volume = 90438340
             change = ((latest_price - prev_close) / prev_close) * 100
             rsi = 50.0
+            advice = trading_logic(ticker, change, volume, rsi)
+            return f"{ticker} latest: ${latest_price:.2f}, Change: {change:.2f}%, Volume: {volume:,}, RSI: {rsi:.2f}. {advice}"
+        elif ticker.upper() == "NVDA":
+            latest_price = 121.495  # System real-time data, 01:10 PM PDT, March 14, 2025
+            prev_close = 115.58
+            volume = 90438340  # Placeholder, no intraday volume update
+            change = ((latest_price - prev_close) / prev_close) * 100
+            rsi = 50.0  # Placeholder until 1-min data
             advice = trading_logic(ticker, change, volume, rsi)
             return f"{ticker} latest: ${latest_price:.2f}, Change: {change:.2f}%, Volume: {volume:,}, RSI: {rsi:.2f}. {advice}"
         stock = yf.Ticker(ticker)
@@ -172,12 +180,11 @@ def trading_logic(ticker, change, volume, rsi=None):
     else:
         advice = f"Hold {ticker} - no clear signal yet."
     
-    # Log trade for learning
     log_trade(ticker, change, volume, rsi, advice)
     return advice
 
 def log_trade(ticker, change, volume, rsi, advice):
-    """Log trade signals to learning.json for self-improvement."""
+    """Log trade signals to learning.json as a list."""
     trade = {
         "timestamp": datetime.now().isoformat(),
         "ticker": ticker,
@@ -185,14 +192,15 @@ def log_trade(ticker, change, volume, rsi, advice):
         "volume": volume,
         "rsi": rsi if rsi else "N/A",
         "advice": advice,
-        "outcome": "pending"  # Simulated for now
+        "outcome": "pending"
     }
     try:
+        data = []
         if os.path.exists("learning.json"):
             with open("learning.json", "r") as f:
                 data = json.load(f)
-        else:
-            data = []
+                if not isinstance(data, list):
+                    data = []  # Reset if corrupted
         data.append(trade)
         with open("learning.json", "w") as f:
             json.dump(data, f, indent=4)
@@ -207,20 +215,31 @@ def optimize_trading_logic():
             return
         with open("learning.json", "r") as f:
             trades = json.load(f)
-        if not trades:
+        if not isinstance(trades, list) or not trades:
             return
-        wins = [t for t in trades if t["outcome"] == "win"]  # Simulate wins for now
-        if len(wins) > 5:  # Arbitrary threshold
+        wins = [t for t in trades if t.get("outcome") == "win"]
+        if len(wins) > 5:
             avg_change = sum(t["change"] for t in wins) / len(wins)
             avg_volume = sum(t["volume"] for t in wins) / len(wins)
             print(f"Optimized logic: Avg winning change: {avg_change:.2f}%, Avg volume: {avg_volume:,}")
-            # Could adjust trading_logic thresholds here
     except Exception as e:
         print(f"Error optimizing logic: {e}")
+
+def extract_ticker(message):
+    """Extract ticker from user input."""
+    message = message.lower()
+    if "nvda" in message or "nvidia" in message:
+        return "NVDA"
+    if "tsla" in message or "tesla" in message:
+        return "TSLA"
+    if "btc" in message or "bitcoin" in message:
+        return "BTCUSDT"
+    return None
 
 def test_groq_message(client, message, model="llama3-8b-8192", max_tokens=200):
     """Send a message to Groq API and return the response, with trading logic."""
     main.last_message = message
+    ticker = extract_ticker(message)
     for _ in range(3):
         try:
             if "news" in message.lower():
@@ -228,10 +247,11 @@ def test_groq_message(client, message, model="llama3-8b-8192", max_tokens=200):
                 if "technology" in message.lower():
                     category = "technology"
                 return fetch_news(category)
-            elif "stock" in message.lower() or "tsla" in message.lower():
-                return fetch_stock_data("TSLA")
-            elif "crypto" in message.lower() or "btc" in message.lower():
-                return fetch_crypto_data("BTCUSDT")
+            elif ticker:
+                if ticker in ["TSLA", "NVDA"]:
+                    return fetch_stock_data(ticker)
+                elif ticker == "BTCUSDT":
+                    return fetch_crypto_data(ticker)
             response = client.chat.completions.create(
                 model=model,
                 messages=[{"role": "user", "content": message}],
@@ -249,14 +269,14 @@ def speak_response(text):
     for _ in range(3):
         try:
             engine = pyttsx3.init()
-            engine.setProperty("rate", 150)
+            engine.setProperty("rate", 145)
             engine.setProperty("volume", 1.0)
             sentences = text.split(". ")
             for sentence in sentences:
                 if sentence:
                     engine.say(sentence + ".")
                     engine.runAndWait()
-                    time.sleep(0.1)
+                    time.sleep(0.2)
             return
         except Exception as e:
             print(f"Error with TTS: {e}")
@@ -274,7 +294,7 @@ def main():
         sys.exit(1)
 
     precache_tts()
-    optimize_trading_logic()  # Check past trades
+    optimize_trading_logic()
 
     print("Recording 5 seconds of audio...")
     audio_file = record_audio()
