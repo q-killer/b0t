@@ -1,0 +1,14 @@
+{
+  "helpful": {
+    "howdy what's going on?": "Hello! How can I assist you today? If you're looking to run your Python script or need any information, feel free to share more details.",
+    "tell me something I don't know!": "Did you know that the world's largest ice cream cone was 15 meters tall and was created in 2014 as part of an advertising campaign for an ice cream brand in India? It was so large that people could walk inside it!",
+    "Hey bot!  tell me something I don't know!": "Did you know that the Great Barrier Reef, located off the coast of Australia, is the world's largest coral reef system and can even be seen from space? It's home to thousands of species of marine life!",
+    "howdy bot! how are you doing?": "Hello there! I'm just a digital assistant, so I don't have feelings, but I'm here and ready to help you with any questions or tasks you might have! How can I assist you today?",
+    "tell me something which happened in the news lately": "Here are some recent headlines:\n\n1. The FBI has joined the search for a 20-year-old missing college student.\n2. Updates and discussions around a potential government funding bill to avoid a shutdown, along with confirmation hearings for a pick to lead the CDC (Centers for Disease Control and Prevention).\n3. Reuters is providing comprehensive international news coverage from all over the globe.\n\nWould you like more specific information on any of these topics or do you need help finding something else?"
+  },
+  "unhelpful": {
+    "cd ~/bot && python3 bot.py": "It looks like you're trying to run a Python script located in your home directory. The command `cd ~/bot` changes the current directory to the 'bot' folder in your home directory, and `python3 bot.py` runs the `bot.py` Python script from that directory. Make sure you have the necessary permissions and dependencies installed before running the script. Would you like me to check if the script exists or provide more information on how to run it?",
+    "": "That's fascinating! Here's another fun fact: The highest mountain in the world, Mount Everest, has an elevation of 8,849 meters above sea level. If you were to stand at its summit, you would be more than 2 kilometers higher up than if you were standing on the peak of the tallest skyscraper in the world!",
+    "hello? can you hear me?  it doesn't look like voice input is working still": "Hello! It seems that voice input isn't working at the moment, but you can still type your messages. How can I assist you today?"
+  }
+}

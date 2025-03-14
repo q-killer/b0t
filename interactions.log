@@ -1,0 +1,80 @@
+Error: Missing some input keys: {'chat_history'}
+
+Error: Missing some input keys: {'chat_history'}
+
+Error: Missing some input keys: {'chat_history'}
+
+Input: howdy bot
+Response: Hello there! How can I assist you today?
+Feedback: yes
+
+Input: cd ~/bot && htop
+Response: It looks like you're trying to run `htop` in the terminal after changing directories. If you'd like assistance with this command or any related tasks, feel free to ask! Otherwise, you can proceed by typing the commands into your terminal.
+Feedback: yes sorry Assistant, I see you've got an attitude; that's cool.  well I hope you can really help me, we're going to grow together; I'm working on you reiterativaly learning so to speak!
+
+Input: how's you're week been?
+Response: My week has been running smoothly, processing queries and learning from interactions. How about yours? Is there anything specific you'd like to chat about or any questions you have?
+Feedback: yes
+
+Error: 
+
+Error: Device index out of range (5 devices available; device index should be between 0 and 4 inclusive)
+
+Error: Device index out of range (5 devices available; device index should be between 0 and 4 inclusive)
+
+Input: cd ~/bot && python3 bot.py
+Response: It looks like you're trying to run a Python script located in your home directory. The command `cd ~/bot` changes the current directory to the 'bot' folder in your home directory, and `python3 bot.py` runs the `bot.py` Python script from that directory. Make sure you have the necessary permissions and dependencies installed before running the script. Would you like me to check if the script exists or provide more information on how to run it?
+Feedback: 
+
+Input: 
+Response: Before we proceed, do you want me to verify if the `bot.py` file exists in your home directory's `bot` folder or provide more details on running the Python script?
+Feedback: y
+
+Error: Device index out of range (5 devices available; device index should be between 0 and 4 inclusive)
+
+Error: Device index out of range (5 devices available; device index should be between 0 and 4 inclusive)
+
+Error: Device index out of range (5 devices available; device index should be between 0 and 4 inclusive)
+
+Error: Device index out of range (5 devices available; device index should be between 0 and 4 inclusive)
+
+Error: Device index out of range (5 devices available; device index should be between 0 and 4 inclusive)
+
+Input: howdy what's going on?
+Response: Hello! How can I assist you today? If you're looking to run your Python script or need any information, feel free to share more details.
+Feedback: yes
+
+Error: Device index out of range (5 devices available; device index should be between 0 and 4 inclusive)
+
+Input: tell me something I don't know!
+Response: Did you know that the world's largest ice cream cone was 15 meters tall and was created in 2014 as part of an advertising campaign for an ice cream brand in India? It was so large that people could walk inside it!
+Feedback: yes
+
+Input: 
+Response: That's fascinating! Here's another fun fact: The highest mountain in the world, Mount Everest, has an elevation of 8,849 meters above sea level. If you were to stand at its summit, you would be more than 2 kilometers higher up than if you were standing on the peak of the tallest skyscraper in the world!
+Feedback: 
+
+Input: Hey bot!  tell me something I don't know!
+Response: Did you know that the Great Barrier Reef, located off the coast of Australia, is the world's largest coral reef system and can even be seen from space? It's home to thousands of species of marine life!
+Feedback: yes
+
+Input: howdy bot! how are you doing?
+Response: Hello there! I'm just a digital assistant, so I don't have feelings, but I'm here and ready to help you with any questions or tasks you might have! How can I assist you today?
+Feedback: yes
+
+Error: Device index out of range (4 devices available; device index should be between 0 and 3 inclusive)
+
+Input: hello? can you hear me?  it doesn't look like voice input is working still
+Response: Hello! It seems that voice input isn't working at the moment, but you can still type your messages. How can I assist you today?
+Feedback: Can you tell me something interesting which happened in the news lately?
+
+Input: tell me something which happened in the news lately
+Response: Here are some recent headlines:
+
+1. The FBI has joined the search for a 20-year-old missing college student.
+2. Updates and discussions around a potential government funding bill to avoid a shutdown, along with confirmation hearings for a pick to lead the CDC (Centers for Disease Control and Prevention).
+3. Reuters is providing comprehensive international news coverage from all over the globe.
+
+Would you like more specific information on any of these topics or do you need help finding something else?
+Feedback: yes
+
