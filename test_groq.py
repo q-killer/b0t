@@ -8,7 +8,7 @@ import sys
 import subprocess
 from faster_whisper import WhisperModel
 from gtts import gTTS
-import playsound
+import pygame.mixer
 
 def load_api_key():
     """Load the Groq API key from .env or environment variable."""
@@ -57,11 +57,15 @@ def test_groq_message(client, message, model="llama3-8b-8192", max_tokens=200):
         sys.exit(1)
 
 def speak_response(text, file_path="output.mp3"):
-    """Convert text to speech using gTTS and play it."""
+    """Convert text to speech using gTTS and play with pygame."""
     try:
         tts = gTTS(text=text, lang="en")
         tts.save(file_path)
-        playsound.playsound(file_path)
+        pygame.mixer.init()
+        pygame.mixer.music.load(file_path)
+        pygame.mixer.music.play()
+        while pygame.mixer.music.get_busy():  # Wait for playback
+            pygame.time.Clock().tick(10)
     except Exception as e:
         print(f"Error with TTS: {e}")
 
