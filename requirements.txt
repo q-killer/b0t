@@ -1,6 +1,5 @@
 groq
 python-dotenv
 faster-whisper
-gtts
-pygame
 feedparser
+pyttsx3
