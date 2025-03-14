@@ -2,5 +2,5 @@ groq
 python-dotenv
 faster-whisper
 gtts
-playsound
+pygame
 pygobject
