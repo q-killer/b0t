@@ -23,7 +23,7 @@ def record_audio(file_path="input.wav", duration=5):
     """Record audio using arecord and return the file path."""
     try:
         subprocess.run(
-            ["arecord", "-d", str(duration), "-f", "cd", file_path],
+            ["arecord", "-d", str(duration), "-f", "cd", "--quiet", file_path],
             check=True, stderr=subprocess.PIPE
         )
         return file_path
@@ -34,8 +34,8 @@ def record_audio(file_path="input.wav", duration=5):
 def transcribe_audio(file_path):
     """Transcribe audio file to text using faster-whisper."""
     try:
-        model = WhisperModel("tiny.en", device="cpu")  # Lightweight model
-        segments, _ = model.transcribe(file_path, beam_size=5)
+        model = WhisperModel("medium.en", device="cpu")  # Higher accuracy
+        segments, _ = model.transcribe(file_path, beam_size=5, vad_filter=True)  # Noise suppression
         text = " ".join(segment.text for segment in segments)
         print(f"Transcribed: {text}")
         return text if text.strip() else None
