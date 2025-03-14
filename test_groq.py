@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""test_groq.py - Robust Groq API test with trading logic, learning loop, and fixes for Future Assistant v1.0"""
+"""test_groq.py - Core bot logic for Future Assistant v1.0"""
 
 import os
 from dotenv import load_dotenv
@@ -8,29 +8,33 @@ import sys
 import subprocess
 from faster_whisper import WhisperModel
 import pyttsx3
-import feedparser
 import time
-import yfinance as yf
-import requests
-import json
-from datetime import datetime, timedelta
+from trading.trading_logic import fetch_stock_data, log_trade, optimize_logic
+
+os.environ["CT2_VERBOSE"] = "0"  # Suppress float16 warning
 
 def load_api_key():
-    """Load the Groq API key from .env or environment variable."""
+    """Load API keys from .env or environment variable."""
     load_dotenv()
-    api_key = os.getenv("GROQ_API_KEY")
-    if not api_key:
+    groq_key = os.getenv("GROQ_API_KEY")
+    alpha_key = os.getenv("ALPHA_VANTAGE_API_KEY")
+    if not groq_key:
         print("Error: GROQ_API_KEY not found. Set it in .env or environment.")
         sys.exit(1)
-    return api_key
+    return groq_key, alpha_key
 
 def precache_tts():
     """Precache a default TTS response."""
     for _ in range(3):
         try:
             engine = pyttsx3.init()
-            engine.setProperty("rate", 140)
+            engine.setProperty("rate", 150)
             engine.setProperty("volume", 1.0)
+            voices = engine.getProperty("voices")
+            for voice in voices:
+                if "female" in voice.name.lower():
+                    engine.setProperty("voice", voice.id)
+                    break
             engine.save_to_file("Processing your request, please wait!", "output.mp3")
             engine.runAndWait()
             print("Precached TTS to output.mp3")
@@ -103,171 +107,6 @@ def fetch_news(category="general"):
             time.sleep(1)
     return "Sorry, I couldn’t fetch the news right now!"
 
-def fetch_stock_data(ticker="TSLA"):
-    """Fetch stock data with real-time overrides."""
-    try:
-        if ticker.upper() == "TSLA":
-            latest_price = 248.606
-            prev_close = 240.68
-            volume = 90438340
-            change = ((latest_price - prev_close) / prev_close) * 100
-            rsi = 50.0
-            advice = trading_logic(ticker, change, volume, rsi, latest_price)
-            return f"{ticker} latest: ${latest_price:.2f}, Change: {change:.2f}%, Volume: {volume:,}, RSI: {rsi:.2f}. {advice}"
-        elif ticker.upper() == "NVDA":
-            latest_price = 121.495
-            prev_close = 115.58
-            volume = 90438340
-            change = ((latest_price - prev_close) / prev_close) * 100
-            rsi = 50.0
-            advice = trading_logic(ticker, change, volume, rsi, latest_price)
-            return f"{ticker} latest: ${latest_price:.2f}, Change: {change:.2f}%, Volume: {volume:,}, RSI: {rsi:.2f}. {advice}"
-        stock = yf.Ticker(ticker)
-        hist = stock.history(period="5d", interval="1d")
-        if hist.empty:
-            return f"No data for {ticker}"
-        latest = hist.iloc[-1]
-        prev = hist.iloc[-2]
-        change = ((latest["Close"] - prev["Close"]) / prev["Close"]) * 100
-        volume = latest["Volume"]
-        rsi = calc_rsi(hist["Close"].values)
-        advice = trading_logic(ticker, change, volume, rsi, latest["Close"])
-        return f"{ticker} latest: ${latest['Close']:.2f}, Change: {change:.2f}%, Volume: {volume:,}, RSI: {rsi:.2f}. {advice}"
-    except Exception as e:
-        print(f"Error fetching stock data: {e}")
-        return f"Couldn’t fetch {ticker} data!"
-
-def fetch_crypto_data(symbol="BTCUSDT"):
-    """Fetch crypto data from Binance."""
-    try:
-        url = f"https://api.binance.com/api/v3/ticker/24hr?symbol={symbol}"
-        resp = requests.get(url).json()
-        price = float(resp["lastPrice"])
-        change = float(resp["priceChangePercent"])
-        volume = float(resp["volume"])
-        advice = trading_logic(symbol, change, volume, None, price)
-        return f"{symbol} latest: ${price:.2f}, Change: {change:.2f}%, Volume: {volume:,.2f}. {advice}"
-    except Exception as e:
-        print(f"Error fetching crypto data: {e}")
-        return f"Couldn’t fetch {symbol} data!"
-
-def calc_rsi(prices, period=14):
-    """Calculate RSI for stock data."""
-    if len(prices) < period + 1:
-        return 50.0
-    deltas = [prices[i] - prices[i-1] for i in range(1, len(prices))]
-    gains = [d if d > 0 else 0 for d in deltas[-period:]]
-    losses = [-d if d < 0 else 0 for d in deltas[-period:]]
-    avg_gain = sum(gains) / period
-    avg_loss = sum(losses) / period
-    rs = avg_gain / avg_loss if avg_loss != 0 else 0
-    return 100 - (100 / (1 + rs))
-
-def trading_logic(ticker, change, volume, rsi=None, entry_price=None):
-    """Ross Cameron-inspired momentum logic with risk management."""
-    sentiment = "neutral"
-    if "news" in main.last_message.lower():
-        sentiment = "positive" if change > 1 else "negative" if change < -1 else "neutral"
-    
-    if rsi and rsi > 70:
-        advice = f"Overbought - consider selling {ticker} with a tight stop."
-    elif rsi and rsi < 30:
-        advice = f"Oversold - consider buying {ticker} with a tight stop."
-    elif volume > 1_000_000 and change > 2:
-        advice = f"Buy {ticker} on breakout, set stop at 1% below entry, target 3% profit."
-    elif change < -2 and sentiment != "positive":
-        advice = f"Sell {ticker} short, set stop at 1% above entry, target 2% profit."
-    else:
-        advice = f"Hold {ticker} - no clear signal yet."
-    
-    log_trade(ticker, change, volume, rsi, advice, entry_price)
-    return advice
-
-def log_trade(ticker, change, volume, rsi, advice, entry_price):
-    """Log trade signals to learning.json with entry price."""
-    trade = {
-        "timestamp": datetime.now().isoformat(),
-        "ticker": ticker,
-        "change": change,
-        "volume": volume,
-        "rsi": rsi if rsi else "N/A",
-        "advice": advice,
-        "entry_price": entry_price,
-        "outcome": "pending"
-    }
-    try:
-        data = []
-        if os.path.exists("learning.json"):
-            with open("learning.json", "r") as f:
-                data = json.load(f)
-                if not isinstance(data, list):
-                    data = []
-        data.append(trade)
-        with open("learning.json", "w") as f:
-            json.dump(data, f, indent=4)
-        print(f"Logged trade to learning.json: {ticker}")
-    except Exception as e:
-        print(f"Error logging trade: {e}")
-
-def evaluate_trade_outcome(trade):
-    """Evaluate trade outcome based on current price (simulated delay)."""
-    ticker = trade["ticker"]
-    entry_price = trade["entry_price"]
-    advice = trade["advice"]
-    try:
-        if ticker in ["TSLA", "NVDA"]:
-            current_price = fetch_stock_data(ticker).split("latest: $")[1].split(",")[0]
-            current_price = float(current_price)
-        elif ticker == "BTCUSDT":
-            current_price = float(fetch_crypto_data(ticker).split("latest: $")[1].split(",")[0])
-        else:
-            return "pending"
-        
-        if "Buy" in advice:
-            profit_target = entry_price * 1.03
-            stop_loss = entry_price * 0.99
-            if current_price >= profit_target:
-                return "win"
-            elif current_price <= stop_loss:
-                return "loss"
-        elif "Sell" in advice:
-            profit_target = entry_price * 0.98
-            stop_loss = entry_price * 1.01
-            if current_price <= profit_target:
-                return "win"
-            elif current_price >= stop_loss:
-                return "loss"
-        return "pending"
-    except Exception as e:
-        print(f"Error evaluating trade: {e}")
-        return "pending"
-
-def optimize_trading_logic():
-    """Optimize trading thresholds based on past trades."""
-    try:
-        if not os.path.exists("learning.json"):
-            return
-        with open("learning.json", "r") as f:
-            trades = json.load(f)
-        if not isinstance(trades, list) or not trades:
-            return
-        
-        # Update outcomes
-        for trade in trades:
-            if trade["outcome"] == "pending":
-                trade["outcome"] = evaluate_trade_outcome(trade)
-        
-        with open("learning.json", "w") as f:
-            json.dump(trades, f, indent=4)
-        
-        wins = [t for t in trades if t["outcome"] == "win"]
-        if len(wins) > 5:
-            avg_change = sum(t["change"] for t in wins) / len(wins)
-            avg_volume = sum(t["volume"] for t in wins) / len(wins)
-            print(f"Optimized logic: Avg winning change: {avg_change:.2f}%, Avg volume: {avg_volume:,}")
-    except Exception as e:
-        print(f"Error optimizing logic: {e}")
-
 def extract_ticker(message):
     """Extract ticker from user input."""
     message = message.lower()
@@ -279,8 +118,8 @@ def extract_ticker(message):
         return "BTCUSDT"
     return None
 
-def test_groq_message(client, message, model="llama3-8b-8192", max_tokens=200):
-    """Send a message to Groq API and return the response, with trading logic."""
+def test_groq_message(client, message, alpha_key, model="llama3-8b-8192", max_tokens=200):
+    """Send a message to Groq API and return the response."""
     main.last_message = message
     ticker = extract_ticker(message)
     for _ in range(3):
@@ -292,12 +131,10 @@ def test_groq_message(client, message, model="llama3-8b-8192", max_tokens=200):
                 return fetch_news(category)
             elif ticker:
                 if ticker in ["TSLA", "NVDA"]:
-                    return fetch_stock_data(ticker)
-                elif ticker == "BTCUSDT":
-                    return fetch_crypto_data(ticker)
+                    return fetch_stock_data(ticker, alpha_key)
             response = client.chat.completions.create(
                 model=model,
-                messages=[{"role": "user", "content": message}],
+                messages=[{"role": "system", "content": "You are an expert financial advisor. Provide confident, expert-level advice."}, {"role": "user", "content": message}],
                 max_tokens=max_tokens
             )
             return response.choices[0].message.content
@@ -308,18 +145,23 @@ def test_groq_message(client, message, model="llama3-8b-8192", max_tokens=200):
     return "Sorry, I couldn’t process that right now!"
 
 def speak_response(text):
-    """Convert text to speech using pyttsx3 with sentence splitting."""
+    """Convert text to speech using pyttsx3 with female voice."""
     for _ in range(3):
         try:
             engine = pyttsx3.init()
-            engine.setProperty("rate", 140)
+            engine.setProperty("rate", 150)
             engine.setProperty("volume", 1.0)
+            voices = engine.getProperty("voices")
+            for voice in voices:
+                if "female" in voice.name.lower():
+                    engine.setProperty("voice", voice.id)
+                    break
             sentences = text.split(". ")
             for sentence in sentences:
                 if sentence:
                     engine.say(sentence + ".")
                     engine.runAndWait()
-                    time.sleep(0.3)
+                    time.sleep(0.5)
             return
         except Exception as e:
             print(f"Error with TTS: {e}")
@@ -327,17 +169,17 @@ def speak_response(text):
     print("Failed to speak response after retries")
 
 def main():
-    """Main function to run Groq API test with trading logic and learning."""
+    """Main function to run Groq API test."""
     main.last_message = ""
-    api_key = load_api_key()
-    client = Groq(api_key=api_key)
+    groq_key, alpha_key = load_api_key()
+    client = Groq(api_key=groq_key)
 
     if not test_mic():
         print("Mic not working, exiting...")
         sys.exit(1)
 
     precache_tts()
-    optimize_trading_logic()
+    optimize_logic()
 
     print("Recording 5 seconds of audio...")
     audio_file = record_audio()
@@ -351,7 +193,7 @@ def main():
             print(f"No transcription, using default: {message}")
 
     print(f"Input: {message}")
-    response = test_groq_message(client, message)
+    response = test_groq_message(client, message, alpha_key)
     print(f"Response: {response}")
 
     speak_response(response)
