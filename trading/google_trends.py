@@ -1,3 +1,6 @@
+#!/usr/bin/env python3
+# ^ Shebang uses env to find python3 in your active myenv
+
 from pytrends.request import TrendReq
 from datetime import datetime
 
