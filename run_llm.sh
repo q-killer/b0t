@@ -65,6 +65,14 @@ if [ ! -f "$VOICE_MODEL_PATH" ]; then
     exit 1
 fi
 
+# Get active PulseAudio sink
+SINK=$(pactl list sinks | grep -B1 "State: RUNNING" | grep "Name:" | awk '{print $2}')
+if [ -z "$SINK" ]; then
+    echo "Warning: No running sink found, falling back to default"
+    SINK=$(pactl info | grep "Default Sink" | awk '{print $3}')
+fi
+echo "Using sink: $SINK"
+
 # Run LLM analysis
 cd "$LLM_DIR" || exit 1
 OUTPUT=$(./llama-cli -m "$MODEL_PATH" -p "$PROMPT" -n 128 --no-conversation 2>/dev/null)
@@ -96,7 +104,7 @@ fi
 
 # Play audio with paplay
 echo "Playing: $PIPER_DIR/output.wav"
-paplay --device=alsa_output.pci-0000_04_00.6.pro-output-0 "$PIPER_DIR/output.wav"
+paplay --device="$SINK" "$PIPER_DIR/output.wav"
 PLAYBACK_STATUS=$?
 if [ $PLAYBACK_STATUS -ne 0 ]; then
     echo "Error: paplay failed (status $PLAYBACK_STATUS)"
