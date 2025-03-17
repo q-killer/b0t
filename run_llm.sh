@@ -1,6 +1,6 @@
 #!/bin/bash
 # Script: run_llm.sh
-# Purpose: Run Qwen LLM and force Piper TTS audio output with named voices via paplay
+# Purpose: Run Qwen LLM and output Piper TTS via PipeWire/PulseAudio
 # Usage: ./run_llm.sh "your prompt here" (e.g., "Analyze this: TSLA is up!")
 
 # Check for prompt argument
@@ -22,12 +22,11 @@ VOICE_MODEL="en_GB-vctk-medium.onnx"
 SPEAKER_ID="8"  # Mia by default
 
 # Named lady voices (VCTK speaker IDs)
-# Mia=8, Liza=42, Luna=45, Sophie=46, Ava=48, Tiffany=56, Olivia=58, Ellie=77
 case "$PROMPT" in
     *"Switch voice to Mia"*) SPEAKER_ID="8"; echo "Voice: Mia"; PROMPT="Switched to Mia";;
     *"Switch voice to Liza"*) SPEAKER_ID="42"; echo "Voice: Liza"; PROMPT="Switched to Liza";;
     *"Switch voice to Luna"*) SPEAKER_ID="45"; echo "Voice: Luna"; PROMPT="Switched to Luna";;
-    *"Switch voice to Sophie"*) SPEAKER_ID="46"; echo "Voice: Sophie"; PROMPT="Switched to Liza";;
+    *"Switch voice to Sophie"*) SPEAKER_ID="46"; echo "Voice: Sophie"; PROMPT="Switched to Sophie";;
     *"Switch voice to Ava"*) SPEAKER_ID="48"; echo "Voice: Ava"; PROMPT="Switched to Ava";;
     *"Switch voice to Tiffany"*) SPEAKER_ID="56"; echo "Voice: Tiffany"; PROMPT="Switched to Tiffany";;
     *"Switch voice to Olivia"*) SPEAKER_ID="58"; echo "Voice: Olivia"; PROMPT="Switched to Olivia";;
@@ -65,7 +64,9 @@ if [ ! -f "$VOICE_MODEL_PATH" ]; then
     exit 1
 fi
 
-# Get active PulseAudio sink
+# Restart PipeWire and get sink
+systemctl --user restart pipewire pipewire-pulse
+sleep 2  # Longer wait for stability
 SINK=$(pactl list sinks | grep -B1 "State: RUNNING" | grep "Name:" | awk '{print $2}' | head -n 1)
 if [ -z "$SINK" ]; then
     echo "Warning: No running sink found, falling back to default"
@@ -73,11 +74,13 @@ if [ -z "$SINK" ]; then
 fi
 echo "Using sink: $SINK"
 
-# Ensure PulseAudio is running and sink is set
-pulseaudio --check || pulseaudio --start
+# Configure and wake sink
 pactl set-sink-mute "$SINK" 0
 pactl set-sink-volume "$SINK" 100%
 pactl set-default-sink "$SINK"
+pactl suspend-sink "$SINK" 0
+paplay --device="$SINK" /dev/zero -t raw -r 44100 -c 2 -f s16le -d 0.1 2>/dev/null
+sleep 1
 
 # Run LLM analysis
 cd "$LLM_DIR" || exit 1
@@ -108,10 +111,12 @@ if [ "$WAV_SIZE" -lt 100 ]; then
     exit 1
 fi
 
-# Play audio with paplay—verbose
+# Play audio with paplay—verbose, log sink state
 echo "Playing: $PIPER_DIR/output.wav"
+pactl list sinks short > sink_state_before.log
 paplay --device="$SINK" --verbose "$PIPER_DIR/output.wav" 2>playback.log
 PLAYBACK_STATUS=$?
+pactl list sinks short > sink_state_after.log
 if [ $PLAYBACK_STATUS -ne 0 ]; then
     echo "Error: paplay failed (status $PLAYBACK_STATUS)"
     cat playback.log
@@ -119,4 +124,6 @@ else
     echo "Playback completed"
     cat playback.log
 fi
-rm -f "$PIPER_DIR/output.wav" playback.log
+echo "Sink state before:"; cat sink_state_before.log
+echo "Sink state after:"; cat sink_state_after.log
+rm -f "$PIPER_DIR/output.wav" playback.log sink_state_before.log sink_state_after.log
