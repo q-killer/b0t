@@ -41,16 +41,11 @@ PIPER_DIR="$HOME/bot/piper"
 [ ! -d "$PIPER_DIR" ] && { echo "Error: $PIPER_DIR not found"; exit 1; }
 [ ! -f "$PIPER_DIR/$VOICE_MODEL" ] && { echo "Error: $PIPER_DIR/$VOICE_MODEL not found"; exit 1; }
 
-# Generate voice
+# Generate and play voice directly
 cd "$PIPER_DIR" || { echo "Failed to cd to $PIPER_DIR"; exit 1; }
-rm -f output.wav
 PIPER_CMD="./piper --model \"$VOICE_MODEL\""
 [ -n "$SPEAKER_ID" ] && PIPER_CMD="$PIPER_CMD --speaker \"$SPEAKER_ID\""
-PIPER_CMD="$PIPER_CMD --output_file output.wav 2>error.log"
+PIPER_CMD="$PIPER_CMD --stdout 2>error.log"
 
-LD_LIBRARY_PATH=$PWD bash -c "echo \"\$TEXT\" | $PIPER_CMD"
-[ ! -f "output.wav" ] && { echo "Error: Piper failed—check error.log"; cat error.log; exit 1; }
-
-# Play with timeout
-timeout 30s aplay output.wav 2>/dev/null || echo "Warning: aplay failed or timed out"
-rm -f output.wav
+LD_LIBRARY_PATH=$PWD bash -c "echo \"\$TEXT\" | $PIPER_CMD | aplay -q"
+[ $? -ne 0 ] && { echo "Error: Playback failed—check error.log"; cat error.log; }
