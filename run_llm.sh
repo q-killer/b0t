@@ -70,18 +70,17 @@ fi
 SINK="alsa_output.pci-0000_04_00.6.analog-stereo"
 echo "Using sink: $SINK"
 
-# Verify sink exists
+# Verify sink exists and prep
 if ! pactl list sinks | grep -q "$SINK"; then
     echo "Error: Sink $SINK not found. Available sinks:"
     pactl list sinks short
     exit 1
 fi
-
-# Prep sink (no restart)
 pactl set-sink-mute "$SINK" 0
 pactl set-sink-volume "$SINK" 75%
 pactl set-default-sink "$SINK"
 pactl suspend-sink "$SINK" 0
+paplay --device="$SINK" /usr/share/sounds/alsa/Front_Center.wav 2>/dev/null  # Wake with real audio
 
 # Run LLM analysis
 cd "$LLM_DIR" || exit 1
