@@ -48,5 +48,5 @@ PIPER_CMD="./piper --model \"$VOICE_MODEL\""
 PIPER_CMD="$PIPER_CMD --stdout 2>error.log"
 
 echo "Speaking: $TEXT"  # Debug output
-LD_LIBRARY_PATH=$PWD bash -c "echo \"\$TEXT\" | $PIPER_CMD | aplay -q"
+LD_LIBRARY_PATH=$PWD bash -c "echo \"\$TEXT\" | $PIPER_CMD | aplay -q -r 48000"
 [ $? -ne 0 ] && { echo "Error: Playback failed—check error.log"; cat error.log; }
