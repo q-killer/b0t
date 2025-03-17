@@ -27,7 +27,7 @@ case "$PROMPT" in
     *"Switch voice to Mia"*) SPEAKER_ID="8"; echo "Voice: Mia"; PROMPT="Switched to Mia";;
     *"Switch voice to Liza"*) SPEAKER_ID="42"; echo "Voice: Liza"; PROMPT="Switched to Liza";;
     *"Switch voice to Luna"*) SPEAKER_ID="45"; echo "Voice: Luna"; PROMPT="Switched to Luna";;
-    *"Switch voice to Sophie"*) SPEAKER_ID="46"; echo "Voice: Sophie"; PROMPT="Switched to Sophie";;
+    *"Switch voice to Sophie"*) SPEAKER_ID="46"; echo "Voice: Sophie"; PROMPT="Switched to Liza";;
     *"Switch voice to Ava"*) SPEAKER_ID="48"; echo "Voice: Ava"; PROMPT="Switched to Ava";;
     *"Switch voice to Tiffany"*) SPEAKER_ID="56"; echo "Voice: Tiffany"; PROMPT="Switched to Tiffany";;
     *"Switch voice to Olivia"*) SPEAKER_ID="58"; echo "Voice: Olivia"; PROMPT="Switched to Olivia";;
@@ -73,9 +73,11 @@ if [ -z "$SINK" ]; then
 fi
 echo "Using sink: $SINK"
 
-# Ensure sink is not muted and has volume
+# Ensure PulseAudio is running and sink is set
+pulseaudio --check || pulseaudio --start
 pactl set-sink-mute "$SINK" 0
 pactl set-sink-volume "$SINK" 100%
+pactl set-default-sink "$SINK"
 
 # Run LLM analysis
 cd "$LLM_DIR" || exit 1
@@ -108,11 +110,13 @@ fi
 
 # Play audio with paplay—verbose
 echo "Playing: $PIPER_DIR/output.wav"
-paplay --device="$SINK" --verbose "$PIPER_DIR/output.wav"
+paplay --device="$SINK" --verbose "$PIPER_DIR/output.wav" 2>playback.log
 PLAYBACK_STATUS=$?
 if [ $PLAYBACK_STATUS -ne 0 ]; then
     echo "Error: paplay failed (status $PLAYBACK_STATUS)"
+    cat playback.log
 else
     echo "Playback completed"
+    cat playback.log
 fi
-rm -f "$PIPER_DIR/output.wav"
+rm -f "$PIPER_DIR/output.wav" playback.log
