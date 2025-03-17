@@ -11,11 +11,13 @@ if [ $# -eq 0 ]; then
 fi
 PROMPT="$1"
 
-# Check for paplay
-if ! command -v paplay >/dev/null 2>&1; then
-    echo "Error: paplay not found. Install pulseaudio-utils: sudo apt install pulseaudio-utils"
-    exit 1
-fi
+# Check for dependencies
+for cmd in paplay sox; do
+    if ! command -v "$cmd" >/dev/null 2>&1; then
+        echo "Error: $cmd not found. Install it: sudo apt install ${cmd/paplay/pulseaudio-utils}"
+        exit 1
+    fi
+done
 
 # Voice defaults
 VOICE_MODEL="en_GB-vctk-medium.onnx"
@@ -64,14 +66,10 @@ if [ ! -f "$VOICE_MODEL_PATH" ]; then
     exit 1
 fi
 
-# Restart PipeWire and get sink
+# Restart PipeWire and set sink
 systemctl --user restart pipewire pipewire-pulse
-sleep 2  # Longer wait for stability
-SINK=$(pactl list sinks | grep -B1 "State: RUNNING" | grep "Name:" | awk '{print $2}' | head -n 1)
-if [ -z "$SINK" ]; then
-    echo "Warning: No running sink found, falling back to default"
-    SINK=$(pactl info | grep "Default Sink" | awk '{print $3}')
-fi
+sleep 2
+SINK="alsa_output.pci-0000_04_00.6.analog-stereo"
 echo "Using sink: $SINK"
 
 # Configure and wake sink
@@ -79,7 +77,7 @@ pactl set-sink-mute "$SINK" 0
 pactl set-sink-volume "$SINK" 100%
 pactl set-default-sink "$SINK"
 pactl suspend-sink "$SINK" 0
-paplay --device="$SINK" /dev/zero -t raw -r 44100 -c 2 -f s16le -d 0.1 2>/dev/null
+paplay --device="$SINK" /dev/zero -t raw -r 48000 -c 2 -f s32le -d 0.1 2>/dev/null
 sleep 1
 
 # Run LLM analysis
@@ -93,7 +91,7 @@ echo "LLM Output: $OUTPUT"
 
 # Generate voice output with Piper
 cd "$PIPER_DIR" || exit 1
-rm -f output.wav
+rm -f output.wav output_converted.wav
 PIPER_CMD="./piper --model \"$VOICE_MODEL_PATH\""
 [ -n "$SPEAKER_ID" ] && PIPER_CMD="$PIPER_CMD --speaker \"$SPEAKER_ID\""
 PIPER_CMD="$PIPER_CMD --output_file \"$PIPER_DIR/output.wav\" 2>error.log"
@@ -111,10 +109,18 @@ if [ "$WAV_SIZE" -lt 100 ]; then
     exit 1
 fi
 
-# Play audio with paplay—verbose, log sink state
-echo "Playing: $PIPER_DIR/output.wav"
+# Convert to PipeWire-compatible format
+sox "$PIPER_DIR/output.wav" -r 48000 -c 2 -e signed-integer -b 32 "$PIPER_DIR/output_converted.wav" 2>sox.log
+if [ ! -f "$PIPER_DIR/output_converted.wav" ]; then
+    echo "Error: sox conversion failed—check sox.log"
+    cat sox.log
+    exit 1
+fi
+
+# Play audio with paplay
+echo "Playing: $PIPER_DIR/output_converted.wav"
 pactl list sinks short > sink_state_before.log
-paplay --device="$SINK" --verbose "$PIPER_DIR/output.wav" 2>playback.log
+paplay --device="$SINK" --verbose "$PIPER_DIR/output_converted.wav" 2>playback.log
 PLAYBACK_STATUS=$?
 pactl list sinks short > sink_state_after.log
 if [ $PLAYBACK_STATUS -ne 0 ]; then
@@ -126,4 +132,4 @@ else
 fi
 echo "Sink state before:"; cat sink_state_before.log
 echo "Sink state after:"; cat sink_state_after.log
-rm -f "$PIPER_DIR/output.wav" playback.log sink_state_before.log sink_state_after.log
+rm -f "$PIPER_DIR/output.wav" "$PIPER_DIR/output_converted.wav" playback.log sink_state_before.log sink_state_after.log sox.log
