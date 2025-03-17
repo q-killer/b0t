@@ -12,7 +12,7 @@ fi
 PROMPT="$1"
 
 # Check for dependencies
-for cmd in paplay sox; do
+for cmd in paplay sox pactl; do
     if ! command -v "$cmd" >/dev/null 2>&1; then
         echo "Error: $cmd not found. Install it: sudo apt install ${cmd/paplay/pulseaudio-utils}"
         exit 1
@@ -68,17 +68,25 @@ fi
 
 # Restart PipeWire and set sink
 systemctl --user restart pipewire pipewire-pulse
-sleep 2
+sleep 5
 SINK="alsa_output.pci-0000_04_00.6.analog-stereo"
 echo "Using sink: $SINK"
 
-# Configure and wake sink
+# Verify and wake sink
+if ! pactl list sinks | grep -q "$SINK"; then
+    echo "Error: Sink $SINK not found. Available sinks:"
+    pactl list sinks short
+    exit 1
+fi
 pactl set-sink-mute "$SINK" 0
-pactl set-sink-volume "$SINK" 100%
+pactl set-sink-volume "$SINK" 75%  # Lower to avoid clipping
 pactl set-default-sink "$SINK"
 pactl suspend-sink "$SINK" 0
-paplay --device="$SINK" /dev/zero -t raw -r 48000 -c 2 -f s32le -d 0.1 2>/dev/null
-sleep 1
+echo "Waking sink..."
+paplay --device="$SINK" /dev/zero -t raw -r 48000 -c 2 -f s32le -d 1 2>/dev/null  # 1s wake-up
+sleep 2
+pactl list sinks | grep -E "Name|State" > sink_wake.log
+echo "Sink state after wake:"; cat sink_wake.log
 
 # Run LLM analysis
 cd "$LLM_DIR" || exit 1
@@ -117,10 +125,10 @@ if [ ! -f "$PIPER_DIR/output_converted.wav" ]; then
     exit 1
 fi
 
-# Play audio with paplay—force PipeWire resampling
+# Play audio with paplay
 echo "Playing: $PIPER_DIR/output_converted.wav"
 pactl list sinks short > sink_state_before.log
-paplay --device="$SINK" --verbose --raw --rate=48000 --channels=2 --format=s32le "$PIPER_DIR/output_converted.wav" 2>playback.log
+paplay --device="$SINK" --verbose --latency-msec=100 "$PIPER_DIR/output_converted.wav" 2>playback.log
 PLAYBACK_STATUS=$?
 pactl list sinks short > sink_state_after.log
 if [ $PLAYBACK_STATUS -ne 0 ]; then
@@ -132,4 +140,4 @@ else
 fi
 echo "Sink state before:"; cat sink_state_before.log
 echo "Sink state after:"; cat sink_state_after.log
-rm -f "$PIPER_DIR/output.wav" "$PIPER_DIR/output_converted.wav" playback.log sink_state_before.log sink_state_after.log sox.log
+rm -f "$PIPER_DIR/output.wav" "$PIPER_DIR/output_converted.wav" playback.log sink_state_before.log sink_state_after.log sox.log sink_wake.log
