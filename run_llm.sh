@@ -117,10 +117,10 @@ if [ ! -f "$PIPER_DIR/output_converted.wav" ]; then
     exit 1
 fi
 
-# Play audio with paplay
+# Play audio with paplay—force PipeWire resampling
 echo "Playing: $PIPER_DIR/output_converted.wav"
 pactl list sinks short > sink_state_before.log
-paplay --device="$SINK" --verbose "$PIPER_DIR/output_converted.wav" 2>playback.log
+paplay --device="$SINK" --verbose --raw --rate=48000 --channels=2 --format=s32le "$PIPER_DIR/output_converted.wav" 2>playback.log
 PLAYBACK_STATUS=$?
 pactl list sinks short > sink_state_after.log
 if [ $PLAYBACK_STATUS -ne 0 ]; then
