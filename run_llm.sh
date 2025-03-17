@@ -66,27 +66,34 @@ if [ ! -f "$VOICE_MODEL_PATH" ]; then
     exit 1
 fi
 
-# Restart PipeWire and set sink
-systemctl --user restart pipewire pipewire-pulse
-sleep 5
+# Set sink
 SINK="alsa_output.pci-0000_04_00.6.analog-stereo"
 echo "Using sink: $SINK"
 
-# Verify and wake sink
+# Ensure PipeWire is ready and sink is running
+systemctl --user restart pipewire pipewire-pulse
+echo "Restarting PipeWire..."
+sleep 5  # Wait for services
 if ! pactl list sinks | grep -q "$SINK"; then
     echo "Error: Sink $SINK not found. Available sinks:"
     pactl list sinks short
     exit 1
 fi
 pactl set-sink-mute "$SINK" 0
-pactl set-sink-volume "$SINK" 75%  # Lower to avoid clipping
+pactl set-sink-volume "$SINK" 75%
 pactl set-default-sink "$SINK"
 pactl suspend-sink "$SINK" 0
+
+# Force sink to RUNNING state
 echo "Waking sink..."
-paplay --device="$SINK" /dev/zero -t raw -r 48000 -c 2 -f s32le -d 1 2>/dev/null  # 1s wake-up
-sleep 2
+until pactl list sinks | grep -A1 "$SINK" | grep -q "State: RUNNING"; do
+    paplay --device="$SINK" /dev/zero -t raw -r 48000 -c 2 -f s32le -d 1 2>/dev/null
+    sleep 1
+    echo "Waiting for sink to activate..."
+done
+echo "Sink activated:"
 pactl list sinks | grep -E "Name|State" > sink_wake.log
-echo "Sink state after wake:"; cat sink_wake.log
+cat sink_wake.log
 
 # Run LLM analysis
 cd "$LLM_DIR" || exit 1
@@ -128,7 +135,7 @@ fi
 # Play audio with paplay
 echo "Playing: $PIPER_DIR/output_converted.wav"
 pactl list sinks short > sink_state_before.log
-paplay --device="$SINK" --verbose --latency-msec=100 "$PIPER_DIR/output_converted.wav" 2>playback.log
+paplay --device="$SINK" --verbose "$PIPER_DIR/output_converted.wav" 2>playback.log
 PLAYBACK_STATUS=$?
 pactl list sinks short > sink_state_after.log
 if [ $PLAYBACK_STATUS -ne 0 ]; then
