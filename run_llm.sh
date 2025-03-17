@@ -66,12 +66,16 @@ if [ ! -f "$VOICE_MODEL_PATH" ]; then
 fi
 
 # Get active PulseAudio sink
-SINK=$(pactl list sinks | grep -B1 "State: RUNNING" | grep "Name:" | awk '{print $2}')
+SINK=$(pactl list sinks | grep -B1 "State: RUNNING" | grep "Name:" | awk '{print $2}' | head -n 1)
 if [ -z "$SINK" ]; then
     echo "Warning: No running sink found, falling back to default"
     SINK=$(pactl info | grep "Default Sink" | awk '{print $3}')
 fi
 echo "Using sink: $SINK"
+
+# Ensure sink is not muted and has volume
+pactl set-sink-mute "$SINK" 0
+pactl set-sink-volume "$SINK" 100%
 
 # Run LLM analysis
 cd "$LLM_DIR" || exit 1
@@ -102,9 +106,9 @@ if [ "$WAV_SIZE" -lt 100 ]; then
     exit 1
 fi
 
-# Play audio with paplay
+# Play audio with paplay—verbose
 echo "Playing: $PIPER_DIR/output.wav"
-paplay --device="$SINK" "$PIPER_DIR/output.wav"
+paplay --device="$SINK" --verbose "$PIPER_DIR/output.wav"
 PLAYBACK_STATUS=$?
 if [ $PLAYBACK_STATUS -ne 0 ]; then
     echo "Error: paplay failed (status $PLAYBACK_STATUS)"
