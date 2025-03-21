@@ -1,3 +1,4 @@
+source ~/bot/piper_env/bin/activate
 VOICE=${1:-'Mia'}
 case $VOICE in
   'Mia') MODEL='en_GB-vctk-medium.onnx' SPEAKER='8';;

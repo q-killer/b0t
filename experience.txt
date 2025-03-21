@@ -1,3 +1,5 @@
 - **Git Recovery**: Reset and renamed project directory.
 - **Whisper Update**: Migrated to whisper-cli from deprecated main.
 - **Modular Design**: Relocated Piper to bot directory.
+- **Git Optimization**: Used LFS to manage large files.
+- **STT Testing**: Set up live mic with Whisper and Piper.
