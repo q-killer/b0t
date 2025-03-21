@@ -17,3 +17,7 @@
 - **Dependency Management**: Handled GLaDOS setup.
 - **PATH Fix**: Resolved uv not found error.
 - **GLaDOS TTS**: Set up and tested voice output.
+- **GLaDOS Fix**: Located and ran correct TTS script.
+- **Patience**: Navigated repo quirks.
+- **Search Smarts**: Switched to find for scripts.
+- **Jupyter Win**: Confirmed GLaDOS via demo.ipynb.

@@ -31,3 +31,6 @@
 ## GLaDOS Setup Fix - March 20, 2025
 - Fixed uv PATH issue for install.py.
 - Tested GLaDOS TTS with live mic input.
+## GLaDOS Simplified - March 20, 2025
+- Used find for script search, ran GLaDOS via -m glados_tts.
+- Leveraged demo.ipynb, tested live mic.
