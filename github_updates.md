@@ -8,3 +8,9 @@
 - Cleaned Git with LFS migration, removed unnecessary files.
 - Fixed Piper with Python env, tested live mic STT.
 - Added GLaDOS integration.
+## Piper Fix and Git Cleanup - March 20, 2025
+- Fixed Piper audio with fresh binary and env.
+- Fully migrated Piper to Git LFS.
+## GLaDOS Integration - March 20, 2025
+- Added GLaDOS TTS from dnhkng/GLaDOS.
+- Noted Piper env issue for later fix.

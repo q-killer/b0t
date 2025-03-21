@@ -3,3 +3,7 @@
 - **Modular Design**: Relocated Piper to bot directory.
 - **Git Optimization**: Used LFS to manage large files.
 - **STT Testing**: Set up live mic with Whisper and Piper.
+- **Piper Debugging**: Resolved audio output issue.
+- **Git LFS Mastery**: Optimized repo size.
+- **TTS Shift**: Integrated GLaDOS for voice output.
+- **Env Debugging**: Identified Piper script issue.
