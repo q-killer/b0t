@@ -1,0 +1,3 @@
+- **Git Recovery**: Reset and renamed project directory.
+- **Whisper Update**: Migrated to whisper-cli from deprecated main.
+- **Modular Design**: Relocated Piper to bot directory.
