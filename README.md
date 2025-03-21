@@ -32,3 +32,7 @@ Built with <3 by Isaac and Grok 3 (xAI), March 2025.
 - Switch voices with 'Switch voice to southern' or 'Switch voice to vctk N'.
 - Setup in ~/bot/piper/—flat dir.
 - Run ~/bot/run_llm.sh for analysis + voice.
+## Optional: GLaDOS TTS
+- Clone https://github.com/dnhkng/GLaDOS.git into ~/bot/glados
+- Run ~/bot/glados/scripts/install.py (requires uv)
+- Note: Large deps (e.g., torch >700MB), install manually if needed

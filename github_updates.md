@@ -14,3 +14,6 @@
 ## GLaDOS Integration - March 20, 2025
 - Added GLaDOS TTS from dnhkng/GLaDOS.
 - Noted Piper env issue for later fix.
+## Piper Fix and Live Mic - March 20, 2025
+- Fixed speak.sh to match working Piper command.
+- Tested live mic with Piper, GLaDOS optional.

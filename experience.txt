@@ -7,3 +7,7 @@
 - **Git LFS Mastery**: Optimized repo size.
 - **TTS Shift**: Integrated GLaDOS for voice output.
 - **Env Debugging**: Identified Piper script issue.
+- **Script Fix**: Aligned speak.sh with Piper success.
+- **Size Caution**: Avoided GLaDOS deps commit.
+- **Script Fix**: Aligned speak.sh with Piper success.
+- **Size Caution**: Avoided GLaDOS deps commit.

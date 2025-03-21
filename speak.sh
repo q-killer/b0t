@@ -5,5 +5,5 @@ case $VOICE in
   'Southern') MODEL='en_GB-southern_english_female-low.onnx' SPEAKER='';;
   *) echo 'Voice not found'; exit 1;;
 esac
-~/bot/piper/piper --model ~/bot/piper/$MODEL --speaker $SPEAKER --output_file out.wav <<< "$TEXT"
+echo "$TEXT" | ~/bot/piper/piper --model ~/bot/piper/$MODEL --speaker $SPEAKER --output_file out.wav
 paplay out.wav && rm out.wav
