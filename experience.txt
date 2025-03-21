@@ -21,3 +21,5 @@
 - **Patience**: Navigated repo quirks.
 - **Search Smarts**: Switched to find for scripts.
 - **Jupyter Win**: Confirmed GLaDOS via demo.ipynb.
+- **Module Fix**: Ran GLaDOS TTS as package module.
+- **Pipeline Win**: Connected Whisper to GLaDOS.
