@@ -11,3 +11,7 @@
 - **Size Caution**: Avoided GLaDOS deps commit.
 - **Script Fix**: Aligned speak.sh with Piper success.
 - **Size Caution**: Avoided GLaDOS deps commit.
+- **Binary Fix**: Restored Piper from ELF error.
+- **Live Mic**: Successfully tested STT-TTS pipeline.
+- **TTS Pivot**: Moved to GLaDOS from Piper issues.
+- **Dependency Management**: Handled GLaDOS setup.

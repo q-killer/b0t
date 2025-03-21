@@ -17,3 +17,14 @@
 ## Piper Fix and Live Mic - March 20, 2025
 - Fixed speak.sh to match working Piper command.
 - Tested live mic with Piper, GLaDOS optional.
+## Piper Binary Fix - March 20, 2025
+- Replaced corrupted Piper binary (ELF header error).
+- Tested live mic with fixed speak.sh.
+- Re-optimized repo with LFS.
+## Piper Binary Fix - March 20, 2025
+- Replaced corrupted Piper binary (ELF header error).
+- Tested live mic with fixed speak.sh.
+- Re-optimized repo with LFS.
+## GLaDOS Focus - March 20, 2025
+- Shifted to GLaDOS TTS due to Piper JSON errors.
+- Installed GLaDOS deps, tested live mic integration.
