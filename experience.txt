@@ -15,3 +15,5 @@
 - **Live Mic**: Successfully tested STT-TTS pipeline.
 - **TTS Pivot**: Moved to GLaDOS from Piper issues.
 - **Dependency Management**: Handled GLaDOS setup.
+- **PATH Fix**: Resolved uv not found error.
+- **GLaDOS TTS**: Set up and tested voice output.

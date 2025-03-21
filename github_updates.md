@@ -28,3 +28,6 @@
 ## GLaDOS Focus - March 20, 2025
 - Shifted to GLaDOS TTS due to Piper JSON errors.
 - Installed GLaDOS deps, tested live mic integration.
+## GLaDOS Setup Fix - March 20, 2025
+- Fixed uv PATH issue for install.py.
+- Tested GLaDOS TTS with live mic input.
